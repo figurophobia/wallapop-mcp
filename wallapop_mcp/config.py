@@ -58,7 +58,7 @@ CONTACTED_PATH = os.path.join(CONFIG_DIR, "contacted.json")
 CLIENT_ID = "wallapop"
 
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 USER_AGENTS = [
