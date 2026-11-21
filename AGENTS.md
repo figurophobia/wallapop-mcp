@@ -60,10 +60,11 @@ Anchor your first offer below target and move up in small steps; `get_offer_stat
    MCP `publish_item`, or use CLI `--no-shipping` (API mode only). Shipping stays
    enabled by default. In-person listings do not need a shipping weight or cost
    configuration, including when the account has no existing listings.
+   Each `publish_item.photo_paths` entry may be a path on the MCP server, a public `http(s)` URL, or a `data:image/jpeg;base64,...` data URL (JPEG only, at most 10 photos, 15 MB each). URLs that resolve to private/loopback addresses are refused and redirects are not followed; temporary files are removed after the call. On success `item_id` is the internal identifier for edit/delete; `public_id` and `url` are available when the create response includes the public slug. Otherwise call `get_item(item_id)` to get the URL. On a partial result inspect the already-created listing before any retry.
 2. **Edit** — `wallapop edit <item> --price 169 --title "…"` (`edit_item`). Lowering the price notifies users who favourited the item. Success is silent.
 3. **Reply to a buyer** (seller side) — reply **by conversation id**; messaging by `item_id` 403s on your own item: `wallapop message --conversation <id> --text "…"` (MCP `send_message` with `conversation_id`).
 4. **Handle offers** — `wallapop offer status`, then `wallapop offer accept <offer_id>` / `decline` / `counter --price 34`. Accept commits the sale (buyer then pays).
-5. **Lifecycle** — `wallapop reserve|sold|delete <item>` (`reserve_item` / `mark_sold` / `delete_item`). A public listing URL is the slug (`.../item/<slug>-<numericid>`), not the bare internal id (which 404s in a browser).
+5. **Lifecycle** — `wallapop reserve|sold|delete <item>` (`reserve_item` / `mark_sold` / `delete_item`). Use the 12-character internal `item_id` from publish/search/get_item, or the complete public URL. The trailing numeric ID alone cannot be resolved reliably. A public listing URL is the slug (`.../item/<slug>-<numericid>`), not the bare internal id (which 404s in a browser).
 
 ## MCP tool reference
 
@@ -90,9 +91,11 @@ before retrying; there is no checkout or payment.
 
 ## API quirks (handled by the library — good to know)
 
-- **`publish` + `color`.** Color-less categories (e.g. mice `10311`) answer `400
-  INVALID_ATTRIBUTE` when `color` is present, even empty. `publish` omits it when
-  empty; pass a color only where the category needs one.
+- **`publish` + optional attributes.** Some categories reject unsupported
+  `brand`, `model`, or `color` with `400 INVALID_ATTRIBUTE`. The client omits
+  these when unspecified; pass a value only when the selected leaf category
+  supports it. A failed publish now returns HTTP status and allowlisted
+  validation details from Wallapop when available.
 - **`edit` state read.** The versioned edit GET (`Accept:
   application/vnd.upload-v2+json`) now returns `406`; `edit_item` reads a plain
   `GET /items/<id>` and maps the live shape (attributes under `type_attributes`,

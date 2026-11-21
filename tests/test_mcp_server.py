@@ -99,3 +99,42 @@ def test_check_saved_search_reports_missing(tmp_path, monkeypatch):
     mcp_server._init(str(tmp_path), allow_writes=False)
     monkeypatch.setattr(mcp_server._c(), "saved_search_exists", lambda params: None)
     assert mcp_server.check_saved_search("switch") == {"saved": False, "id": None}
+
+
+def test_mcp_publish_reports_upstream_400_without_credentials(tmp_path, monkeypatch):
+    monkeypatch.setenv("WALLAPOP_ACCESS_TOKEN", "tok")
+    mcp_server._init(str(tmp_path), allow_writes=True)
+    monkeypatch.setattr(mcp_server._c(), "publish", lambda **_kwargs: mcp_server.Response(
+        400, {"error_message": "publish POST failed with HTTP 400", "upstream": {
+            "code": "INVALID_ATTRIBUTE", "message": "unsupported color", "field": "color",
+            "authorization": "Bearer secret", "redirect": "https://example.test/?sig=secret",
+        }}, False, False,
+    ))
+    response = mcp_server.publish_item("T", "D", 10.0, "10311", "good", photo_paths=["photo.jpg"])
+    assert response["status"] == 400
+    assert response["data"]["upstream"]["field"] == "color"
+    assert "unsupported color" in response["error"]
+    assert "secret" not in str(response)
+
+
+def test_listing_tools_reject_numeric_id_with_actionable_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("WALLAPOP_ACCESS_TOKEN", "tok")
+    mcp_server._init(str(tmp_path), allow_writes=True)
+    monkeypatch.setattr(mcp_server._c(), "item", lambda *_args: pytest.fail("get_item called"))
+    monkeypatch.setattr(mcp_server._c(), "delete_item", lambda *_args: pytest.fail("delete_item called"))
+    monkeypatch.setattr(mcp_server._c(), "edit_item", lambda *_args, **_kwargs: pytest.fail("edit_item called"))
+    for call in (mcp_server.get_item, mcp_server.delete_item, mcp_server.edit_item):
+        response = call("1321487684")
+        assert response["ok"] is False
+        assert "internal item_id" in response["error"]
+
+
+def test_get_item_upstream_404_is_structured(tmp_path, monkeypatch):
+    mcp_server._init(str(tmp_path), allow_writes=False)
+    monkeypatch.setattr(mcp_server._c(), "item", lambda _id: (_ for _ in ()).throw(
+        mcp_server.ApiError("item 9jdw3gx0ml6k unavailable (404): no error detail supplied")
+    ))
+    response = mcp_server.get_item("9jdw3gx0ml6k")
+    assert response["ok"] is False
+    assert response["status"] == 404
+    assert "unavailable" in response["error"]

@@ -165,7 +165,7 @@ a web slug or a full URL.
 | `send_offer` | `item_id`, `amount` | Send a purchase offer |
 | `respond_offer` | `offer_id`, `action` | Accept or decline an offer |
 | `counter_offer` | `offer_id`, `amount` | Propose a new amount on an open offer |
-| `publish_item` | `title`, `description`, `price`, `category_leaf_id`, `condition`, `photo_paths` | Publish a listing |
+| `publish_item` | `title`, `description`, `price`, `category_leaf_id`, `condition`, `photo_paths` (server paths, public http(s) URLs or JPEG base64 data URLs) | Publish a listing |
 | `edit_item` | `item_id` | Update only supplied listing fields, preserving other attributes |
 | `reserve_item` | `item_id`, `reserved` | Set reservation state on an owned listing |
 | `mark_sold` | `item_id`, `sold` | Set sold state on an owned listing |
